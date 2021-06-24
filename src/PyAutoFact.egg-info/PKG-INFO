@@ -1,0 +1,37 @@
+Metadata-Version: 2.1
+Name: PyAutoFact
+Version: 0.0.1
+Summary: Auto Factorization package for PyTorch modules
+Home-page: https://github.com/SamuelCahyawijaya/auto_fact
+Author: Samuel Cahyawijaya
+Author-email: samuel.cahyawijaya@gmail.com
+License: UNKNOWN
+Project-URL: Bug Tracker, https://github.com/SamuelCahyawijaya/auto_fact/issues
+Description: # PyAutoFact
+        Automatic linear factorization library for pytorch
+        
+        ### What is PyAutoFact
+        Seek over your PyTorch module, and change all `Linear` layers into `LED` layers with specified rank
+        
+        ### How to Install
+        ```
+        pip install PyAutoFact
+        ```
+        
+        ### Usage
+        ```
+        from transformers import BertModel, BertConfig
+        from py_auto_fact import auto_fact
+        
+        config = BertConfig.from_pretrained('bert-base-uncased', pretrained=False)
+        model = BertModel(config=config)
+        
+        model = auto_fact(model, rank=100)
+        ```
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.3
+Description-Content-Type: text/markdown
