@@ -1,8 +1,14 @@
 # PyAutoFact
-Automatic linear factorization library for pytorch
+### Automatic linear factorization library for pytorch
+
+<img src="img/pytorch-logo-dark.png" width="10%"> [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+
+If you use any source codes included in this toolkit in your work, please cite the following paper.
+- Winata, G. I., Cahyawijaya, S., Lin, Z., Liu, Z., & Fung, P. (2019). Lightweight and Efficient End-to-End Speech Recognition Using Low-Rank Transformer. arXiv preprint arXiv:1910.13923. (Accepted in ICASSP 2020)
 
 ### What is PyAutoFact
-Seek over your PyTorch module, and change all `Linear` layers into `LED` layers with specified rank
+PyAutoFact is a small library to convert `Linear` layer into its own variant which called `LED`.
+PyAutoFact seeks over your PyTorch module and replace all `Linear` layers into `LED` layers with the specified rank
 
 ### How to Install
 ```
