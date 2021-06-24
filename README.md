@@ -29,4 +29,4 @@ model = auto_fact(model, rank=100)
 ### Why Use PyAutoFact
 - Improve the speed of you model significantly, check our [Example Notebook](https://github.com/SamuelCahyawijaya/py_auto_fact/blob/main/examples/factorize_bert.ipynb)
 - Mantain model performance with appropriate choice of rank, check our [ICASSP 2020 Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9053878)
-- Easy to use and applicable for any kind of model!
+- Easy to use and works on any kind of model!
