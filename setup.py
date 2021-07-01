@@ -1,3 +1,4 @@
+import os
 import setuptools
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -23,11 +24,11 @@ setuptools.setup(
     install_requires=[
         "pymf3==0.1.1",
         "transformers==4.8.2",
-        "torch",
+        "torch>=1.5.0",
         "scipy",
         "cvxopt==1.2.6"
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.6",
+    python_requires=">=3.3",
 )
