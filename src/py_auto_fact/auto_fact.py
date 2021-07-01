@@ -1,13 +1,34 @@
 import copy
+import torch
 import torch.nn as nn
 from .lr_module import LED, CED
 
-# Input Definition
-## module - nn module to be factorized
-## deepcopy - deepcopy module before factorization, return new factorized copy of the model
-## ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
-## fact_led_unit - flag for skipping factorization on LED and CED unit
-def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_led_unit=False, solver='random'):
+r"""
+Input:
+    weight - weight of the original nn.module to be factorized
+    rank - the rank to be applied for low-rank factorization
+    
+Output:
+   low-rank factorization weight matrix U and V
+"""
+def linear_svd(weight, rank, num_iter=10):
+    u,s,v = torch.svd_lowrank(weight, q=rank, niter=num_iter)
+    return u*s, v.T
+    
+r"""
+Input:
+    module - nn.module to be factorized
+    rank - the rank to be applied for low-rank factorization
+    deepcopy - deepcopy module before factorization, return new factorized copy of the model
+    ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
+    fact_led_unit - flag for skipping factorization on LED and CED unit
+    solver - solver for network initialization ('random', 'svd', 'nmf')
+    num_iter - number of iteration for  'svd' and 'snmf' solvers
+    
+Output:
+    low-rank version of the given module (will create a model copy if `deep_copy=True`)
+"""
+def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_led_unit=False, solver='random', num_iter=5):
     if deepcopy:
         module = copy.deepcopy(module)
         
@@ -20,19 +41,23 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
                 continue
                 
-            # Replace with LED unit
-            led_module = LED(child.in_features, child.out_features, r=rank, bias=child.bias is not None)
-            module._modules[key] = led_module
+            # Create LED unit
+            led_module = LED(child.in_features, child.out_features, r=rank, bias=child.bias is not None, device=child.weight.device)
             
             # Initialize matrix
             if solver == 'svd':
-                # led_module.led_unit[0] # Initialize U
-                # led_module.led_unit[1] # Initialize V
-                pass
+                U, V = linear_svd(child.weight, rank)
+                led_module.led_unit[0].weight.data = U # Initialize U
+                led_module.led_unit[1].weight.data = V # Initialize V
+                led_module.led_unit[1].bias = child.bias
             elif solver == 'nmf':
                 # led_module.led_unit[0] # Initialize U
                 # led_module.led_unit[1] # Initialize V
-                pass
+                led_module.led_unit[1].bias = child.bias
+
+            # Replace module
+            module._modules[key] = led_module
+                
         elif type(child) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
             if ignore_lower_equal_dim and (child.in_channels <= rank or child.out_channels <= rank):
                 # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
@@ -45,14 +70,16 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
             
             # Initialize matrix
             if solver == 'svd':
-                # led_module.led_unit[0] # Initialize U
-                # led_module.led_unit[1] # Initialize V
-                pass
+                raise NotImplementedError
+                # ced_module.led_unit[0] # Initialize U
+                # ced_module.led_unit[1] # Initialize V
+                ced_module.led_unit[1].bias = module.bias
             elif solver == 'nmf':
-                # led_module.led_unit[0] # Initialize U
-                # led_module.led_unit[1] # Initialize V
-                pass
+                raise NotImplementedError
+                # ced_module.led_unit[0] # Initialize U
+                # ced_module.led_unit[1] # Initialize V
+                ced_module.led_unit[1].bias = module.bias
         else:
             # Perform recursive tracing
-            child = auto_fact(child, rank, fact_led_unit=fact_led_unit)
+            child = auto_fact(child, rank, fact_led_unit=fact_led_unit, solver=solver, num_iter=num_iter)
     return module
