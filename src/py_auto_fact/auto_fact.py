@@ -1,6 +1,21 @@
 import copy
 import torch.nn as nn
+import pymf3
 from .lr_module import LED, CED
+
+r"""
+Input:
+    weight - weight of the original nn.module to be factorized
+    rank - the rank to be applied for low-rank factorization
+
+Output:
+    low-rank factorization weight matrix U and V
+"""
+def linear_snmf(weight, rank, num_iter=10):
+    data = matrix.cpu().numpy()
+    mdl = pymf.SNMF(data, rank)
+    mdl.factorize(niter)
+    return torch.FloatTensor(mdl.W, device.weight.device), torch.FloatTensor(mdl.H, device.weight.device)
 
 # Input Definition
 ## module - nn module to be factorized
@@ -29,10 +44,9 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 # led_module.led_unit[0] # Initialize U
                 # led_module.led_unit[1] # Initialize V
                 pass
-            elif solver == 'nmf':
-                # led_module.led_unit[0] # Initialize U
-                # led_module.led_unit[1] # Initialize V
-                pass
+            elif solver == 'snmf':
+                led_module.led_unit[0], led_module.led_unit[1] = linear_snmf(module.weight, rank)
+
         elif type(child) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
             if ignore_lower_equal_dim and (child.in_channels <= rank or child.out_channels <= rank):
                 # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector

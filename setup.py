@@ -11,16 +11,23 @@ setuptools.setup(
     description="Auto Factorization package for PyTorch modules",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/SamuelCahyawijaya/auto_fact",
+    url="https://github.com/SamuelCahyawijaya/py_auto_fact",
     project_urls={
-        "Bug Tracker": "https://github.com/SamuelCahyawijaya/auto_fact/issues",
+        "Bug Tracker": "https://github.com/SamuelCahyawijaya/py_auto_fact/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=[
+        "pymf3==0.1.1",
+        "transformers==4.8.2",
+        "torch",
+        "scipy",
+        "cvxopt==1.2.6"
+    ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.3",
+    python_requires=">=3.6",
 )
