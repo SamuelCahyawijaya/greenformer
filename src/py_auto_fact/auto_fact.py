@@ -12,8 +12,8 @@ Output:
     low-rank factorization weight matrix U and V
 """
 def linear_snmf(weight, rank, num_iter=10):
-    data = matrix.cpu().numpy()
-    mdl = pymf.SNMF(data, rank)
+    data = weight.cpu().detach().numpy()
+    mdl = pymf3.semiNMF(data, rank)
     mdl.factorize(niter)
     return torch.FloatTensor(mdl.W, device.weight.device), torch.FloatTensor(mdl.H, device.weight.device)
 
@@ -68,7 +68,7 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 # led_module.led_unit[1] # Initialize V
                 led_module.led_unit[1].bias = child.bias
             elif solver == 'snmf':
-                led_module.led_unit[0], led_module.led_unit[1] = linear_snmf(module.weight, rank)
+                led_module.led_unit[0], led_module.led_unit[1] = linear_snmf(child.weight, rank)
 
             # Replace module
             module._modules[key] = led_module

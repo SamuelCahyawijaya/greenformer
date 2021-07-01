@@ -22,11 +22,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "pymf3==0.1.1",
+        "pymf @ https://github.com/gentaiscool/pymf3/archive/refs/tags/1.0.tar.gz",
         "transformers==4.8.2",
         "torch>=1.5.0",
         "scipy",
-        "cvxopt==1.2.6"
+        "cvxopt==1.2.6",
+        "matplotlib==3.4.2",
+        "seaborn==0.11.1",
+        "sklearn"
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
