@@ -12,10 +12,11 @@ Output:
     low-rank factorization weight matrix U and V
 """
 def linear_snmf(weight, rank, num_iter=10):
+    orig_device = weight.device
     data = weight.cpu().detach().numpy()
     mdl = matrix_fact.SNMF(data, rank)
     mdl.factorize(num_iter)
-    return torch.FloatTensor(mdl.W, device=weight.device), torch.FloatTensor(mdl.H, device=weight.device)
+    return torch.FloatTensor(mdl.W, device=orig_device), torch.FloatTensor(mdl.H, device=orig_device)
 
 r"""
 Input:
@@ -25,10 +26,11 @@ Output:
     low-rank factorization weight matrix U and V
 """
 def linear_nmf(weight, rank, num_iter=10):
+    orig_device = weight.device
     data = weight.cpu().detach().numpy()
     mdl = matrix_fact.NMF(data, rank)
     mdl.factorize(num_iter)
-    return torch.FloatTensor(mdl.W, device=weight.device), torch.FloatTensor(mdl.H, device=weight.device)
+    return torch.FloatTensor(mdl.W, device=orig_device), torch.FloatTensor(mdl.H, device=orig_device)
 
 r"""
 Input:
@@ -48,7 +50,7 @@ Input:
     deepcopy - deepcopy module before factorization, return new factorized copy of the model
     ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
     fact_led_unit - flag for skipping factorization on LED and CED unit
-    solver - solver for network initialization ('random', 'svd', 'nmf')
+    solver - solver for network initialization ('random', 'svd', 'snmf')
     num_iter - number of iteration for  'svd' and 'snmf' solvers
     
 Output:
@@ -77,10 +79,14 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 led_module.led_unit[1].weight.data = V # Initialize V
                 led_module.led_unit[1].bias = child.bias
             elif solver == 'nmf':
-                led_module.led_unit[0].weight.data, led_module.led_unit[1].weight.data = linear_nmf(child.weight, rank)
+                U, V = linear_nmf(child.weight, rank)
+                led_module.led_unit[0].weight.data = U # Initialize U
+                led_module.led_unit[1].weight.data = V # Initialize V
                 led_module.led_unit[1].bias = child.bias
             elif solver == 'snmf':
-                led_module.led_unit[0].weight.data, led_module.led_unit[1].weight.data = linear_snmf(child.weight, rank)
+                U, V = linear_snmf(child.weight, rank)
+                led_module.led_unit[0].weight.data = U # Initialize U
+                led_module.led_unit[1].weight.data = V # Initialize V
                 led_module.led_unit[1].bias = child.bias
 
             # Replace module
@@ -103,6 +109,11 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 # ced_module.led_unit[1] # Initialize V
                 ced_module.led_unit[1].bias = module.bias
             elif solver == 'nmf':
+                raise NotImplementedError
+                # ced_module.led_unit[0] # Initialize U
+                # ced_module.led_unit[1] # Initialize V
+                ced_module.led_unit[1].bias = module.bias
+            elif solver == 'snmf':
                 raise NotImplementedError
                 # ced_module.led_unit[0] # Initialize U
                 # ced_module.led_unit[1] # Initialize V
