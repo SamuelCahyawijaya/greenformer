@@ -22,7 +22,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "pymf @ https://github.com/gentaiscool/pymf3/archive/refs/tags/1.0.tar.gz",
+        "matrix-fact==1.1.0",
         "transformers==4.8.2",
         "torch>=1.5.0",
         "scipy",
