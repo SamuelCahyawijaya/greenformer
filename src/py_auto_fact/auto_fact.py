@@ -1,7 +1,7 @@
 import copy
 import torch
 import torch.nn as nn
-import pymf3
+import matrix_fact
 from .lr_module import LED, CED
 
 r"""
@@ -13,9 +13,22 @@ Output:
 """
 def linear_snmf(weight, rank, num_iter=10):
     data = weight.cpu().detach().numpy()
-    mdl = pymf3.semiNMF(data, rank)
-    mdl.factorize(niter)
-    return torch.FloatTensor(mdl.W, device.weight.device), torch.FloatTensor(mdl.H, device.weight.device)
+    mdl = matrix_fact.SNMF(data, rank)
+    mdl.factorize(num_iter)
+    return torch.FloatTensor(mdl.W, device=weight.device), torch.FloatTensor(mdl.H, device=weight.device)
+
+r"""
+Input:
+    weight - weight of the original nn.module to be factorized
+    rank - the rank to be applied for low-rank factorization
+Output:
+    low-rank factorization weight matrix U and V
+"""
+def linear_nmf(weight, rank, num_iter=10):
+    data = weight.cpu().detach().numpy()
+    mdl = matrix_fact.NMF(data, rank)
+    mdl.factorize(num_iter)
+    return torch.FloatTensor(mdl.W, device=weight.device), torch.FloatTensor(mdl.H, device=weight.device)
 
 r"""
 Input:
@@ -64,11 +77,11 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
                 led_module.led_unit[1].weight.data = V # Initialize V
                 led_module.led_unit[1].bias = child.bias
             elif solver == 'nmf':
-                # led_module.led_unit[0] # Initialize U
-                # led_module.led_unit[1] # Initialize V
+                led_module.led_unit[0].weight.data, led_module.led_unit[1].weight.data = linear_nmf(child.weight, rank)
                 led_module.led_unit[1].bias = child.bias
             elif solver == 'snmf':
-                led_module.led_unit[0], led_module.led_unit[1] = linear_snmf(child.weight, rank)
+                led_module.led_unit[0].weight.data, led_module.led_unit[1].weight.data = linear_snmf(child.weight, rank)
+                led_module.led_unit[1].bias = child.bias
 
             # Replace module
             module._modules[key] = led_module
