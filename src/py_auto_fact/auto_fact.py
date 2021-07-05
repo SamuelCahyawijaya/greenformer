@@ -17,12 +17,6 @@ def linear_snmf(weight, rank, num_iter=10):
     mdl.factorize(num_iter)
     return mdl.W, mdl.H
 
-# def linear_snmf(weight, rank, num_iter=10):
-#     orig_device = weight.device
-#     mdl = matrix_fact.SNMF(weight.cpu().detach().numpy(), rank)
-#     mdl.factorize(num_iter)
-#     return torch.FloatTensor(mdl.W), torch.FloatTensor(mdl.H)
-
 r"""
 Input:
     weight - weight of the original nn.module to be factorized
