@@ -22,7 +22,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "matrix-fact==1.1.1",
+        "matrix-fact==1.1.2",
         "transformers==4.8.2",
         "torch>=1.5.0",
         "scipy",
