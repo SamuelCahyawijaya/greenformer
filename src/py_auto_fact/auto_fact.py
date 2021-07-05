@@ -13,10 +13,15 @@ Output:
 """
 def linear_snmf(weight, rank, num_iter=10):
     orig_device = weight.device
-    data = weight.cpu().detach().numpy()
-    mdl = matrix_fact.SNMF(data, rank)
+    mdl = matrix_fact.TorchSNMF(weight, rank)
     mdl.factorize(num_iter)
-    return torch.FloatTensor(mdl.W, device=orig_device), torch.FloatTensor(mdl.H, device=orig_device)
+    return mdl.W, mdl.H
+
+# def linear_snmf(weight, rank, num_iter=10):
+#     orig_device = weight.device
+#     mdl = matrix_fact.SNMF(weight.cpu().detach().numpy(), rank)
+#     mdl.factorize(num_iter)
+#     return torch.FloatTensor(mdl.W), torch.FloatTensor(mdl.H)
 
 r"""
 Input:
