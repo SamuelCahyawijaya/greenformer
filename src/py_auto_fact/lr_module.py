@@ -31,9 +31,9 @@ class CED(nn.Module):
             raise ValueError(f'invalid dimension for parameter `kernel_size`. Only 1d, 2d, and 3d kernel size is supported')
 
         self.ced_unit = nn.Sequential(
-            module_cls(in_channels=in_channels, out_channels=r, kernel_size=fact_ks, bias=False, device=device), 
-            module_cls(in_channels=r, out_channels=out_channels, kernel_size=kernel_size, stride=stride, 
-                           padding=padding, dilation=dilation, padding_mode=padding_mode, bias=bias, device=device)
+            module_cls(in_channels=in_channels, out_channels=r, kernel_size=kernel_size, stride=stride, 
+                           padding=padding, dilation=dilation, padding_mode=padding_mode, bias=False, device=device),
+            module_cls(in_channels=r, out_channels=out_channels, kernel_size=fact_ks, bias=bias, device=device)
         )
             
     def forward(self, inputs):

@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="PyAutoFact",
-    version="0.0.1",
+    version="0.1.3",
     author="Samuel Cahyawijaya",
     author_email="samuel.cahyawijaya@gmail.com",
     description="Auto Factorization package for PyTorch modules",
@@ -22,7 +22,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "matrix-fact==1.1.0",
+        "matrix-fact==1.1.2",
         "transformers==4.8.2",
         "torch>=1.5.0",
         "scipy",
