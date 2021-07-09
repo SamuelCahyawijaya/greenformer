@@ -28,7 +28,7 @@ from mesh_transformer.sampling import nucleaus_sample
 from mesh_transformer.transformer_shard import CausalTransformer
 
 if __name__ == "__main__":
-    ### LOAD GPT-J jax shit
+    ### LOAD GPT-J
     params = {
     "layers": 28,
     "d_model": 4096,
