@@ -31,6 +31,8 @@ pip install mesh-transformer-jax/ jax==0.2.12
 
 # cuda[your_cuda_version]
 pip install jaxlib==0.1.67+cuda110 -f https://storage.googleapis.com/jax-releases/jax_releases.html
+
+mkdir gpt-j-hf
 python convert_gptJ.py
 ```
 
