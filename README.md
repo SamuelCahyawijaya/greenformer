@@ -15,27 +15,6 @@ PyAutoFact seeks over your PyTorch module, replace all `Linear` layers into `LED
 pip install PyAutoFact
 ```
 
-### How to Setup GPT-J 6B
-```
-apt-get install zstd
-
-# the "slim" version contain only bf16 weights and no optimizer parameters, which minimizes bandwidth and memory
-wget -c https://the-eye.eu/public/AI/GPT-J-6B/step_383500_slim.tar.zstd
-
-tar -I zstd -xf step_383500_slim.tar.zstd
-
-pip install -r mesh-transformer-jax/requirements.txt
-
-# jax 0.2.12 is required due to a regression with xmap in 0.2.13
-pip install mesh-transformer-jax/ jax==0.2.12
-
-# cuda[your_cuda_version]
-pip install jaxlib==0.1.67+cuda110 -f https://storage.googleapis.com/jax-releases/jax_releases.html
-
-mkdir gpt-j-hf
-python convert_gptJ.py
-```
-
 ### Usage
 ##### BERT Model
 ```
