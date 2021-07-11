@@ -2,7 +2,7 @@ import copy
 import torch
 import torch.nn as nn
 import matrix_fact
-from lr_module import LED, CED
+from .lr_module import LED, CED
 
 r"""
 Input:
