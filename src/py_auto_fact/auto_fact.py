@@ -2,7 +2,7 @@ import copy
 import torch
 import torch.nn as nn
 import matrix_fact
-from .lr_module import LED, CED
+from lr_module import LED, CED
 
 r"""
 Input:
@@ -77,13 +77,13 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         return led_module
 
     elif type(module) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
-        if ignore_lower_equal_dim and (module.in_channels <= rank or module.out_channels <= rank):
+        if ignore_lower_equal_dim and (module.in_channels // module.groups <= rank or module.out_channels <= rank):
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
 
         # Replace with CED unit
-        ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, 
-                            padding=module.padding, dilation=module.dilation, padding_mode=module.padding_mode, bias=module.bias is not None)
+        ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, padding=module.padding, 
+                dilation=module.dilation, padding_mode=module.padding_mode, groups=module.groups, bias=module.bias is not None, device=module.weight.device)
 
         # Initialize matrix
         if solver == 'svd':
