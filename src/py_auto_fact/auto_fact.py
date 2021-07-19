@@ -55,19 +55,19 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
 
         # Initialize matrix
         if solver == 'svd':
-            U, V = linear_svd(module.weight.T, rank)
+            U, V = linear_svd(module.weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
                 led_module.led_unit[1].bias = module.bias
         elif solver == 'nmf':
-            U, V = linear_nmf(module.weight.T, rank)
+            U, V = linear_nmf(module.weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
                 led_module.led_unit[1].bias = module.bias
         elif solver == 'snmf':
-            U, V = linear_snmf(module.weight.T, rank)
+            U, V = linear_snmf(module.weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
@@ -88,21 +88,21 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         # Initialize matrix
         if solver == 'svd':
             weight = module.weight.view(module.out_channels, -1)
-            u,v = linear_svd(weight.T, rank)
+            u,v = linear_svd(weight.T, rank, num_iter=num_iter)
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
             if module.bias is not None:
                 ced_module.ced_unit[1].bias.data = module.bias.data
         elif solver == 'nmf':
             weight = module.weight.view(module.out_channels, -1)
-            u,v = linear_nmf(weight.T, rank)
+            u,v = linear_nmf(weight.T, rank, num_iter=num_iter)
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
             if module.bias is not None:
                 ced_module.ced_unit[1].bias.data = module.bias.data
         elif solver == 'snmf':
             weight = module.weight.view(module.out_channels, -1)
-            u,v = linear_snmf(weight.T, rank)   
+            u,v = linear_snmf(weight.T, rank, num_iter=num_iter)   
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
             if module.bias is not None:
