@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import matrix_fact
 from .lr_module import LED, CED
+import warnings
 
 r"""
 Input:
@@ -47,7 +48,7 @@ r"""
 def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold):
     if type(module) == nn.Linear:
         if ignore_lower_equal_dim and (module.in_features <= rank or module.out_features <= rank):
-            print(f'skipping linear with in: {module.in_feature}, out: {module.out_features}, rank: {rank}')
+            warnings.warn(f'skipping linear with in: {module.in_features}, out: {module.out_features}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
         
@@ -59,7 +60,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
             cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
             if cum_eigen_vals[rank] < eigen_threshold:
-                print('cum_eigen_vals[rank] < eigen_threshold', cum_eigen_vals[rank], eigen_threshold)
+                warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
                 return module
             
         # Create LED unit
@@ -90,6 +91,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
 
     elif type(module) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
         if ignore_lower_equal_dim and (module.in_channels // module.groups <= rank or module.out_channels <= rank):
+            warnings.warn(f'skipping linear with in: {module.in_channels  // module.groups}, out: {module.out_channels}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
 
@@ -101,6 +103,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
             cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
             if cum_eigen_vals[rank] < eigen_threshold:
+                warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
                 return module
             
         # Replace with CED unit
