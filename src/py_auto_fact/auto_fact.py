@@ -44,30 +44,42 @@ def linear_svd(weight, rank, num_iter=10):
 
 r"""
 """
-def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter):
+def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold):
     if type(module) == nn.Linear:
         if ignore_lower_equal_dim and (module.in_features <= rank or module.out_features <= rank):
+            print(f'skipping linear with in: {module.in_feature}, out: {module.out_features}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
-
+        
+        # Extract module weight
+        weight = module.weight
+        
+        if eigen_threshold is not None:
+            # Perform eigen
+            eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
+            cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
+            if cum_eigen_vals[rank] < eigen_threshold:
+                print('cum_eigen_vals[rank] < eigen_threshold', cum_eigen_vals[rank], eigen_threshold)
+                return module
+            
         # Create LED unit
         led_module = LED(module.in_features, module.out_features, r=rank, bias=module.bias is not None, device=module.weight.device)
 
         # Initialize matrix
         if solver == 'svd':
-            U, V = linear_svd(module.weight.T, rank, num_iter=num_iter)
+            U, V = linear_svd(weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
                 led_module.led_unit[1].bias = module.bias
         elif solver == 'nmf':
-            U, V = linear_nmf(module.weight.T, rank, num_iter=num_iter)
+            U, V = linear_nmf(weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
                 led_module.led_unit[1].bias = module.bias
         elif solver == 'snmf':
-            U, V = linear_snmf(module.weight.T, rank, num_iter=num_iter)
+            U, V = linear_snmf(weight.T, rank, num_iter=num_iter)
             led_module.led_unit[0].weight.data = U.T # Initialize U
             led_module.led_unit[1].weight.data = V.T # Initialize V
             if module.bias is not None:
@@ -81,27 +93,34 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
 
+        # Extract layer weight
+        weight = module.weight.view(module.out_channels, -1)
+        
+        if eigen_threshold is not None:
+            # Perform eigen
+            eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
+            cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
+            if cum_eigen_vals[rank] < eigen_threshold:
+                return module
+            
         # Replace with CED unit
         ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, padding=module.padding, 
                 dilation=module.dilation, padding_mode=module.padding_mode, groups=module.groups, bias=module.bias is not None, device=module.weight.device)
 
         # Initialize matrix
         if solver == 'svd':
-            weight = module.weight.view(module.out_channels, -1)
             u,v = linear_svd(weight.T, rank, num_iter=num_iter)
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
             if module.bias is not None:
                 ced_module.ced_unit[1].bias.data = module.bias.data
         elif solver == 'nmf':
-            weight = module.weight.view(module.out_channels, -1)
             u,v = linear_nmf(weight.T, rank, num_iter=num_iter)
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
             if module.bias is not None:
                 ced_module.ced_unit[1].bias.data = module.bias.data
         elif solver == 'snmf':
-            weight = module.weight.view(module.out_channels, -1)
             u,v = linear_snmf(weight.T, rank, num_iter=num_iter)   
             ced_module.ced_unit[0].weight.data = u.T.view_as(ced_module.ced_unit[0].weight) # Initialize U
             ced_module.ced_unit[1].weight.data = v.T.view_as(ced_module.ced_unit[1].weight) # Initialize V
@@ -124,13 +143,13 @@ Input:
 Output:
     low-rank version of the given module (will create a model copy if `deep_copy=True`)
 """
-def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_led_unit=False, solver='random', num_iter=10):
+def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_led_unit=False, solver='random', num_iter=10, eigen_threshold=None):
     if deepcopy:
         module = copy.deepcopy(module)
         
     # If the top module is Linear or Conv, return the factorized module directly
     if type(module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
-        return factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
+        return factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
     
     for key, child in module._modules.items():
         if not fact_led_unit and (type(child) in [LED, CED]):
@@ -138,8 +157,8 @@ def auto_fact(module, rank, deepcopy=False, ignore_lower_equal_dim=True, fact_le
             
         if type(child) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
             # Replace module
-            module._modules[key] = factorize_module(child, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
+            module._modules[key] = factorize_module(child, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
         else:
             # Perform recursive tracing
-            child = auto_fact(child, rank, fact_led_unit=fact_led_unit, solver=solver, num_iter=num_iter)
+            child = auto_fact(child, rank, False, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
     return module
