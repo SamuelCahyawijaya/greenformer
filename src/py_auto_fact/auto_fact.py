@@ -47,6 +47,12 @@ r"""
 """
 def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold):
     if type(module) == nn.Linear:
+        # Define rank from the given rank percentage
+        if rank < 1:
+            rank = int(min(module.in_features, module.out_features) * rank)
+            if rank == 0:
+                return module
+                    
         if ignore_lower_equal_dim and (module.in_features <= rank or module.out_features <= rank):
             warnings.warn(f'skipping linear with in: {module.in_features}, out: {module.out_features}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
@@ -62,7 +68,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             if cum_eigen_vals[rank] < eigen_threshold:
                 warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
                 return module
-            
+        
         # Create LED unit
         led_module = LED(module.in_features, module.out_features, r=rank, bias=module.bias is not None, device=module.weight.device)
 
@@ -90,6 +96,12 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         return led_module
 
     elif type(module) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
+        # Define rank from the given rank percentage
+        if rank > 0 and rank < 1:
+            rank = int(min(module.in_channels // module.groups, module.out_channels) * rank)
+            if rank == 0:
+                return module
+            
         if ignore_lower_equal_dim and (module.in_channels // module.groups <= rank or module.out_channels <= rank):
             warnings.warn(f'skipping linear with in: {module.in_channels  // module.groups}, out: {module.out_channels}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
