@@ -47,14 +47,14 @@ r"""
 """
 def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold):
     if type(module) == nn.Linear:
-        limit_dim = (module.in_features * module.out_features) / (module.in_features + module.out_features)
+        limit_rank = int((module.in_features * module.out_features) / (module.in_features + module.out_features))
         # Define rank from the given rank percentage
         if rank < 1:
-            rank = int(limit_dim * rank)
+            rank = int(limit_rank * rank)
             if rank == 0:
                 return module
                     
-        if ignore_lower_equal_dim and (max_dims <= rank):
+        if ignore_lower_equal_dim and (limit_rank <= rank):
             warnings.warn(f'skipping linear with in: {module.in_features}, out: {module.out_features}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
@@ -100,15 +100,19 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
 
     elif type(module) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
         # Define rank from the given rank percentage
-        limit_dim = ((module.in_channels // module.groups) * module.out_channels) / ((module.in_channels // module.groups) + module.out_channels)
+        limit_rank = int((module.in_channels * (module.out_channels // module.groups)) / (module.in_channels + (module.out_channels // module.groups)))
         
         if rank > 0 and rank < 1:
-            rank = int(limit_rank * rank)
+            rank = int(limit_rank * rank)                
             if rank == 0:
                 return module
+        
+        # Handle grouped convolution
+        if module.groups > 1 and rank % module.groups > 0:
+            rank = (1 + (rank // module.groups)) * module.groups
             
         if ignore_lower_equal_dim and (limit_rank <= rank):
-            warnings.warn(f'skipping linear with in: {module.in_channels  // module.groups}, out: {module.out_channels}, rank: {rank}')
+            warnings.warn(f'skipping convolution with in: {module.in_channels}, out: {module.out_channels // module.groups}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
 
@@ -122,7 +126,12 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             if cum_eigen_vals[rank] < eigen_threshold:
                 warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
                 return module
-            
+
+        print('module.in_channels', module.in_channels)
+        print('module.out_channels', module.out_channels)
+        print('module.rank', rank)
+        print('module.groups', module.groups)
+        
         # Replace with CED unit
         ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, padding=module.padding, 
                 dilation=module.dilation, padding_mode=module.padding_mode, groups=module.groups, bias=module.bias is not None, device=module.weight.device)
