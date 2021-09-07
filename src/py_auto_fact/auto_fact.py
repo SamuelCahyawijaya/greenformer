@@ -105,10 +105,11 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         limit_rank = int((module.in_channels * (module.out_channels // module.groups)) / (module.in_channels + (module.out_channels // module.groups)))
         
         if rank > 0 and rank < 1:
-            rank = int(limit_rank * rank)                
+            rank = limit_rank * rank                
             if rank == 0:
                 return module
-        
+        rank = int(rank)
+
         # Handle grouped convolution
         if module.groups > 1 and rank % module.groups > 0:
             rank = (1 + (rank // module.groups)) * module.groups
