@@ -53,6 +53,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             rank = int(limit_rank * rank)
             if rank == 0:
                 return module
+        rank = int(rank)
                     
         if ignore_lower_equal_dim and (limit_rank <= rank):
             warnings.warn(f'skipping linear with in: {module.in_features}, out: {module.out_features}, rank: {rank}')
@@ -106,6 +107,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             rank = int(limit_rank * rank)                
             if rank == 0:
                 return module
+        rank = int(rank)
         
         # Handle grouped convolution
         if module.groups > 1 and rank % module.groups > 0:
@@ -126,11 +128,6 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
             if cum_eigen_vals[rank] < eigen_threshold:
                 warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
                 return module
-
-        print('module.in_channels', module.in_channels)
-        print('module.out_channels', module.out_channels)
-        print('module.rank', rank)
-        print('module.groups', module.groups)
         
         # Replace with CED unit
         ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, padding=module.padding, 
