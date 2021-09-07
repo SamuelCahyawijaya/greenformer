@@ -50,7 +50,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         limit_rank = int((module.in_features * module.out_features) / (module.in_features + module.out_features))
         # Define rank from the given rank percentage
         if rank < 1:
-            rank = limit_rank * rank
+            rank = int(limit_rank * rank)
             if rank == 0:
                 return module
         rank = int(rank)
@@ -104,7 +104,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         limit_rank = int((module.in_channels * (module.out_channels // module.groups)) / (module.in_channels + (module.out_channels // module.groups)))
         
         if rank > 0 and rank < 1:
-            rank = limit_rank * rank                
+            rank = int(limit_rank * rank)
             if rank == 0:
                 return module
         rank = int(rank)
@@ -178,41 +178,24 @@ def auto_fact(original_module, rank, deepcopy=False, ignore_lower_equal_dim=True
         copy_module = copy.deepcopy(original_module)
     else:
         copy_module = original_module
-
-    # copy_module = copy.deepcopy(original_module)
-
-    print('===== root ======')
-    print(original_module)
-
         
     # If the top module is Linear or Conv, return the factorized module directly
     if type(original_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
-        print('hey')
         return factorize_module(original_module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
 
     for copy_key, original_key in zip(copy_module._modules, original_module._modules):
-
-        print(original_key, original_module._modules[original_key])
-
         if not fact_led_unit and (type(original_module._modules[original_key] in [LED, CED]) == True):
-            print(original_module._modules[original_key] in [LED, CED])
-            print('nono')
             continue
 
-        print(type(original_module._modules[original_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d])
-
         if type(original_module._modules[original_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] and factorize_child:
-            print('replace')
             # Replace module
             copy_module._modules[copy_key] = factorize_module(original_module._modules[original_key], rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
 
         else:
             if(len(original_module._modules[original_key]._modules.items()) > 0):
                 if factorizable_module_list is None or original_module._modules[original_key] in factorizable_module_list:
-                    print('child factorizable')
                     copy_module._modules[copy_key] = auto_fact(original_module._modules[original_key], rank, False, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold, factorizable_module_list, True)
                 else:
-                    print('depends', factorize_child)
                     copy_module._modules[copy_key] = auto_fact(original_module._modules[original_key], rank, False, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold, factorizable_module_list, factorize_child)
 
     return copy_module
