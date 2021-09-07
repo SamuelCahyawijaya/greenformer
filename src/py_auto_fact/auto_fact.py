@@ -44,8 +44,18 @@ def linear_svd(weight, rank, num_iter=10):
     return (u*s), v.T
 
 r"""
+Input:
+    module - nn.module to be factorized
+    rank - the rank to be applied for low-rank factorization
+    ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
+    fact_led_unit - flag for skipping factorization on LED and CED unit
+    solver - solver for network initialization ('random', 'svd', 'snmf')
+    num_iter - number of iteration for  'svd' and 'snmf' solvers
+    
+Output:
+    low-rank version of the given module
 """
-def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold):
+def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter):
     if type(module) == nn.Linear:
         limit_rank = int((module.in_features * module.out_features) / (module.in_features + module.out_features))
         # Define rank from the given rank percentage
@@ -62,15 +72,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         
         # Extract module weight
         weight = module.weight
-        
-        if eigen_threshold is not None:
-            # Perform eigen
-            eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
-            cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
-            if cum_eigen_vals[rank] < eigen_threshold:
-                warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
-                return module
-        
+                
         # Create LED unit
         led_module = LED(module.in_features, module.out_features, r=rank, bias=module.bias is not None, device=module.weight.device)
 
@@ -120,14 +122,6 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
 
         # Extract layer weight
         weight = module.weight.view(module.out_channels, -1)
-        
-        if eigen_threshold is not None:
-            # Perform eigen
-            eigen_vals, _ = torch.linalg.eigh(weight.mm(weight.T))
-            cum_eigen_vals = (eigen_vals / eigen_vals.sum()).sort(descending=True).values.cumsum(dim=0)
-            if cum_eigen_vals[rank] < eigen_threshold:
-                warnings.warn(f'cumulative eigen values < eigen_threshold ({eigen_threshold})')
-                return module
         
         # Replace with CED unit
         ced_module = CED(module.in_channels, module.out_channels, r=rank, kernel_size=module.kernel_size, stride=module.stride, padding=module.padding, 
@@ -179,11 +173,11 @@ def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, factor
     else:
         copy_module = module
     
-    def auto_fact_recursive(module, rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=True, fact_led_unit=False, eigen_threshold=None, factorize_child=False, reference_module=None):
+    def auto_fact_recursive(module, rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=True, fact_led_unit=False, factorize_child=False, reference_module=None):
 
         # If the top module is Linear or Conv, return the factorized module directly
         if type(reference_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
-            return factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
+            return factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
 
         for key, reference_key in zip(module._modules, reference_module._modules):
 
@@ -192,14 +186,14 @@ def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, factor
 
             if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] and factorize_child:
                 # Replace module
-                module._modules[key] = factorize_module(module._modules[key], rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold)
+                module._modules[key] = factorize_module(module._modules[key], rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
 
             else:
                 if(len(reference_module._modules[reference_key]._modules.items()) > 0):
                     if factorizable_module_list is None or reference_module._modules[reference_key] in factorizable_module_list:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, eigen_threshold=eigen_threshold, factorize_child=True, reference_module=reference_module._modules[reference_key])
+                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, factorize_child=True, reference_module=reference_module._modules[reference_key])
                     else:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, eigen_threshold=eigen_threshold, factorize_child=factorize_child, reference_module=reference_module._modules[reference_key])
+                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, factorize_child=factorize_child, reference_module=reference_module._modules[reference_key])
 
         return module
 
