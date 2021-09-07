@@ -166,33 +166,36 @@ Input:
 Output:
     low-rank version of the given module (will create a model copy if `deep_copy=True`)
 """
-def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, submodules=None, fact_led_unit=False):
+def auto_fact(module, rank, solver='random', num_iter=10, submodules=None, deepcopy=False, fact_led_unit=False):
     if deepcopy:
         copy_module = copy.deepcopy(module)
     else:
         copy_module = module
     
-    def auto_fact_recursive(module, rank, solver, num_iter, submodules, fact_led_unit=False, factorize_child=False, reference_module=None):
+    def auto_fact_recursive(module, reference_module, rank, solver, num_iter, submodules, fact_led_unit, factorize_child):
         # If the top module is Linear or Conv, return the factorized module directly
         if type(reference_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
             return factorize_module(module, rank, fact_led_unit, solver, num_iter)
 
         for key, reference_key in zip(module._modules, reference_module._modules):
-
+            # Skip LED or CED units if `fact_led_unit` is True
             if not fact_led_unit and type(reference_module._modules[reference_key]) in [LED, CED]:
                 continue
 
-            if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] and factorize_child:
-                # Replace module
+            if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] \
+                    and (factorize_child or reference_module._modules[reference_key] in submodules):
+                # Factorize Linear to LED and Convolution to CED
                 module._modules[key] = factorize_module(module._modules[key], rank, fact_led_unit, solver, num_iter)
             else:
                 # Perform recursive tracing
                 if(len(reference_module._modules[reference_key]._modules.items()) > 0):
                     if submodules is None or reference_module._modules[reference_key] in submodules:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=True, reference_module=reference_module._modules[reference_key])
+                        module._modules[key] = auto_fact_recursive(module._modules[key], reference_module._modules[reference_key], rank, 
+                                                            solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=True)
                     else:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=factorize_child, reference_module=reference_module._modules[reference_key])
+                        module._modules[key] = auto_fact_recursive(module._modules[key], reference_module._modules[reference_key], rank,
+                                                    solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=factorize_child)
         return module
 
     # Perform recursive factorization
-    return auto_fact_recursive(copy_module, rank, solver, num_iter, submodules, reference_module=module)
+    return auto_fact_recursive(copy_module, module, rank, solver, num_iter, submodules, fact_led_unit, False)
