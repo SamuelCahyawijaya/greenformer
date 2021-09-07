@@ -47,7 +47,6 @@ r"""
 Input:
     module - nn.module to be factorized
     rank - the rank to be applied for low-rank factorization
-    ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
     fact_led_unit - flag for skipping factorization on LED and CED unit
     solver - solver for network initialization ('random', 'svd', 'snmf')
     num_iter - number of iteration for  'svd' and 'snmf' solvers
@@ -55,7 +54,7 @@ Input:
 Output:
     low-rank version of the given module
 """
-def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter):
+def factorize_module(module, rank, fact_led_unit, solver, num_iter):
     if type(module) == nn.Linear:
         limit_rank = int((module.in_features * module.out_features) / (module.in_features + module.out_features))
         # Define rank from the given rank percentage
@@ -65,7 +64,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
                 return module
         rank = int(rank)
                     
-        if ignore_lower_equal_dim and (limit_rank <= rank):
+        if (limit_rank <= rank):
             warnings.warn(f'skipping linear with in: {module.in_features}, out: {module.out_features}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
@@ -115,7 +114,7 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
         if module.groups > 1 and rank % module.groups > 0:
             rank = (1 + (rank // module.groups)) * module.groups
             
-        if ignore_lower_equal_dim and (limit_rank <= rank):
+        if (limit_rank <= rank):
             warnings.warn(f'skipping convolution with in: {module.in_channels}, out: {module.out_channels // module.groups}, rank: {rank}')
             # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
             return module
@@ -156,28 +155,27 @@ def factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver
     
 r"""
 Input:
-    module - nn.module to be factorized
-    rank - the rank to be applied for low-rank factorization
-    deepcopy - deepcopy module before factorization, return new factorized copy of the model
-    ignore_lower_equal_dim - skip factorization if input feature is lower or equal to rank
-    fact_led_unit - flag for skipping factorization on LED and CED unit
-    solver - solver for network initialization ('random', 'svd', 'snmf')
-    num_iter - number of iteration for  'svd' and 'snmf' solvers
+    model - the model (nn.Module) to be factorized (required)
+    rank - the rank to be applied for low-rank factorization (required)
+    deepcopy - deepcopy module before factorization, return new factorized copy of the model (default: False)
+    solver - solver for network initialization ('random', 'svd', 'snmf') (default: 'random')
+    num_iter - number of iteration for  'svd' and 'snmf' solvers (default: 10)
+    submodules - submodules of model of which the factorization will be applied (default: None)
+    fact_led_unit - flag for skipping factorization on LED and CED unit (default: False)
     
 Output:
     low-rank version of the given module (will create a model copy if `deep_copy=True`)
 """
-def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, factorizable_module_list=None):
+def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, submodules=None, fact_led_unit=False):
     if deepcopy:
         copy_module = copy.deepcopy(module)
     else:
         copy_module = module
     
-    def auto_fact_recursive(module, rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=True, fact_led_unit=False, factorize_child=False, reference_module=None):
-
+    def auto_fact_recursive(module, rank, solver, num_iter, submodules, fact_led_unit=False, factorize_child=False, reference_module=None):
         # If the top module is Linear or Conv, return the factorized module directly
         if type(reference_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
-            return factorize_module(module, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
+            return factorize_module(module, rank, fact_led_unit, solver, num_iter)
 
         for key, reference_key in zip(module._modules, reference_module._modules):
 
@@ -186,15 +184,15 @@ def auto_fact(module, rank, deepcopy=False, solver='random', num_iter=10, factor
 
             if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] and factorize_child:
                 # Replace module
-                module._modules[key] = factorize_module(module._modules[key], rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter)
-
+                module._modules[key] = factorize_module(module._modules[key], rank, fact_led_unit, solver, num_iter)
             else:
+                # Perform recursive tracing
                 if(len(reference_module._modules[reference_key]._modules.items()) > 0):
-                    if factorizable_module_list is None or reference_module._modules[reference_key] in factorizable_module_list:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, factorize_child=True, reference_module=reference_module._modules[reference_key])
+                    if submodules is None or reference_module._modules[reference_key] in submodules:
+                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=True, reference_module=reference_module._modules[reference_key])
                     else:
-                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, factorizable_module_list, ignore_lower_equal_dim=ignore_lower_equal_dim, fact_led_unit=fact_led_unit, factorize_child=factorize_child, reference_module=reference_module._modules[reference_key])
-
+                        module._modules[key] = auto_fact_recursive(module._modules[key], rank, solver, num_iter, submodules, fact_led_unit=fact_led_unit, factorize_child=factorize_child, reference_module=reference_module._modules[reference_key])
         return module
 
-    return auto_fact_recursive(copy_module, rank, solver, num_iter, factorizable_module_list, reference_module=module)
+    # Perform recursive factorization
+    return auto_fact_recursive(copy_module, rank, solver, num_iter, submodules, reference_module=module)
