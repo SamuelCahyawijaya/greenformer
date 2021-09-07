@@ -199,23 +199,3 @@ def auto_fact(original_module, rank, deepcopy=False, ignore_lower_equal_dim=True
                     copy_module._modules[copy_key] = auto_fact(original_module._modules[original_key], rank, False, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold, factorizable_module_list, factorize_child)
 
     return copy_module
-
-
-    
-    # for key, child in module._modules.items():
-    #     if not fact_led_unit and (type(child) in [LED, CED]):
-    #         continue
-            
-    #     if type(child) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] and (factorizable_module_list != None and child in factorizable_module_list):
-
-    #         if factorizable_module_list is None:
-    #             # Replace module
-    #             module._modules[key] = factorize_module(child, rank, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold, factorizable_module_list)
-    #         else:
-                
-
-            
-    #     else:
-    #         # Perform recursive tracing
-    #         child = auto_fact(child, rank, False, ignore_lower_equal_dim, fact_led_unit, solver, num_iter, eigen_threshold, factorizable_module_list)
-    # return module
