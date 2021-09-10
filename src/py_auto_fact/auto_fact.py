@@ -155,7 +155,7 @@ def factorize_module(module, rank, fact_led_unit, solver, num_iter):
     
 r"""
 Input:
-    model - the model (nn.Module) to be factorized (required)
+    module - the module (nn.Module) to be factorized (required)
     rank - the rank to be applied for low-rank factorization (required)
     deepcopy - deepcopy module before factorization, return new factorized copy of the model (default: False)
     solver - solver for network initialization ('random', 'svd', 'snmf') (default: 'random')
@@ -183,7 +183,7 @@ def auto_fact(module, rank, solver='random', num_iter=10, submodules=None, deepc
                 continue
 
             if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] \
-                    and (factorize_child or reference_module._modules[reference_key] in submodules):
+                    and (factorize_child or reference_module._modules[reference_key] in ([] if submodules is None else submodules)):
                 # Factorize Linear to LED and Convolution to CED
                 module._modules[key] = factorize_module(module._modules[key], rank, fact_led_unit, solver, num_iter)
             else:
