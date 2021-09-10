@@ -3,13 +3,24 @@ import torch.nn as nn
 class LED(nn.Module):
     def __init__(self, in_features, out_features, r, bias=True, device='cpu'):
         super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
         self.led_unit = nn.Sequential(
             nn.Linear(in_features=in_features, out_features=r, bias=False, device=device), 
             nn.Linear(in_features=r, out_features=out_features, bias=bias, device=device)
         )
 
     def forward(self, inputs):
-        return self.led_unit(inputs)
+        outputs_shape = None
+        if len(inputs.shape) > 2:
+            outputs_shape = list(inputs.shape[:-1]) + [self.out_features]
+            inputs = inputs.view(-1,inputs.shape[-1])
+            
+        outputs = self.led_unit(inputs)
+        if outputs_shape is not None:
+            outputs = outputs.view(outputs_shape)
+            
+        return outputs
     
 class CED(nn.Module):
     def __init__(self, in_channels, out_channels, r, kernel_size, stride=1, padding=0, 

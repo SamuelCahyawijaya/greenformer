@@ -4,6 +4,7 @@ import torch.nn as nn
 import matrix_fact
 from .lr_module import LED, CED
 import warnings
+from transformers.modeling_utils import Conv1D as HFConv1D
 
 r"""
 Input:
@@ -99,7 +100,51 @@ def factorize_module(module, rank, fact_led_unit, solver, num_iter):
 
         # Return module
         return led_module
+    elif type(module) == HFConv1D:
+        in_features, out_features = module.weight.shape
+        limit_rank = int((in_features * out_features) / (in_features + out_features))
+        # Define rank from the given rank percentage
+        if rank < 1:
+            rank = int(limit_rank * rank)
+            if rank == 0:
+                return module
+        rank = int(rank)
+                    
+        if (limit_rank <= rank):
+            warnings.warn(f'skipping linear with in: {in_features}, out: {out_features}, rank: {rank}')
+            # Ignore if input/output features is smaller than rank to prevent factorization on low dimensional input/output vector
+            return module
+        
+        # Extract module weight
+        weight = module.weight.T
+                
+        # Create LED unit
+        led_module = LED(in_features, out_features, r=rank, bias=module.bias is not None, device=module.weight.device)
 
+        # Initialize matrix
+        if solver == 'random':
+            pass
+        elif solver == 'svd':
+            U, V = linear_svd(weight.T, rank, num_iter=num_iter)
+            led_module.led_unit[0].weight.data = U.T # Initialize U
+            led_module.led_unit[1].weight.data = V.T # Initialize V
+            if module.bias is not None:
+                led_module.led_unit[1].bias = module.bias
+        elif solver == 'nmf':
+            U, V = linear_nmf(weight.T, rank, num_iter=num_iter)
+            led_module.led_unit[0].weight.data = U.T # Initialize U
+            led_module.led_unit[1].weight.data = V.T # Initialize V
+            if module.bias is not None:
+                led_module.led_unit[1].bias = module.bias
+        elif solver == 'snmf':
+            U, V = linear_snmf(weight.T, rank, num_iter=num_iter)
+            led_module.led_unit[0].weight.data = U.T # Initialize U
+            led_module.led_unit[1].weight.data = V.T # Initialize V
+            if module.bias is not None:
+                led_module.led_unit[1].bias = module.bias
+
+        # Return module
+        return led_module
     elif type(module) in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
         # Define rank from the given rank percentage
         limit_rank = int((module.in_channels * (module.out_channels // module.groups)) / (module.in_channels + (module.out_channels // module.groups)))
@@ -174,7 +219,7 @@ def auto_fact(module, rank, solver='random', num_iter=10, submodules=None, deepc
     
     def auto_fact_recursive(module, reference_module, rank, solver, num_iter, submodules, fact_led_unit, factorize_child):
         # If the top module is Linear or Conv, return the factorized module directly
-        if type(reference_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
+        if type(reference_module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d, HFConv1D]:
             return factorize_module(module, rank, fact_led_unit, solver, num_iter)
 
         for key, reference_key in zip(module._modules, reference_module._modules):
@@ -182,7 +227,7 @@ def auto_fact(module, rank, solver='random', num_iter=10, submodules=None, deepc
             if not fact_led_unit and type(reference_module._modules[reference_key]) in [LED, CED]:
                 continue
 
-            if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d] \
+            if type(reference_module._modules[reference_key]) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d, HFConv1D] \
                     and (factorize_child or reference_module._modules[reference_key] in ([] if submodules is None else submodules)):
                 # Factorize Linear to LED and Convolution to CED
                 module._modules[key] = factorize_module(module._modules[key], rank, fact_led_unit, solver, num_iter)
