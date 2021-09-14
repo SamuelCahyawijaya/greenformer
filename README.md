@@ -6,9 +6,9 @@
 If you use any source codes included in this toolkit in your work, please cite the following paper.
 - Winata, G. I., Cahyawijaya, S., Lin, Z., Liu, Z., & Fung, P. (2020, May). Lightweight and efficient end-to-end speech recognition using low-rank transformer. In ICASSP 2020-2020 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6144-6148). IEEE.
 
-### What is PyAutoFact
-PyAutoFact is a library to convert `Linear`, `Conv1d`, `Conv2d`, `Conv3d` layers into its own variant which called `LED`.
-PyAutoFact seeks over your PyTorch module, replace all `Linear` layers into `LED` layers and all `Conv1d`, `Conv2d`, `Conv3d` layers into `CED` layers with the specified rank.
+### What is Greenformer
+Greenformer is a library to convert `Linear`, `Conv1d`, `Conv2d`, `Conv3d` layers into its own variant which called `LED`.
+Greenformer seeks over your PyTorch module, replace all `Linear` layers into `LED` layers and all `Conv1d`, `Conv2d`, `Conv3d` layers into `CED` layers with the specified rank.
 
 ### How to Install
 ```

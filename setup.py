@@ -6,15 +6,15 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="PyAutoFact",
-    version="0.1.17",
+    version="0.1.18",
     author="Samuel Cahyawijaya",
     author_email="samuel.cahyawijaya@gmail.com",
-    description="Auto Factorization package for PyTorch modules",
+    description="Automatic Factorization package for PyTorch modules",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/SamuelCahyawijaya/py_auto_fact",
+    url="https://github.com/SamuelCahyawijaya/greenformer",
     project_urls={
-        "Bug Tracker": "https://github.com/SamuelCahyawijaya/py_auto_fact/issues",
+        "Bug Tracker": "https://github.com/SamuelCahyawijaya/greenformer/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
