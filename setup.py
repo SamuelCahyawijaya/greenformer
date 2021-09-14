@@ -5,8 +5,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="PyAutoFact",
-    version="0.1.18",
+    name="greenformer",
+    version="0.2.2",
     author="Samuel Cahyawijaya",
     author_email="samuel.cahyawijaya@gmail.com",
     description="Automatic Factorization package for PyTorch modules",
