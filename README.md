@@ -1,4 +1,4 @@
-# PyAutoFact
+# Greenformer
 ### Automatic factorization library for pytorch
 
 <img src="img/pytorch-logo-dark.png" width="10%"> [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
@@ -12,14 +12,14 @@ PyAutoFact seeks over your PyTorch module, replace all `Linear` layers into `LED
 
 ### How to Install
 ```
-pip install PyAutoFact
+pip install greenformer
 ```
 
 ### Usage
 ##### BERT Model
 ```
 from transformers import BertModel, BertConfig
-from py_auto_fact import auto_fact
+from greenformer import auto_fact
 
 config = BertConfig.from_pretrained('bert-base-uncased', pretrained=False)
 model = BertModel(config=config)
@@ -31,13 +31,13 @@ model = auto_fact(model, rank=100, deepcopy=False, ignore_lower_equal_dim=True, 
 ```
 import torch
 from torchvision import models
-from py_auto_fact import auto_fact
+from greenformer import auto_fact
 
 model = models.vgg16()
 model = auto_fact(model, rank=64, deepcopy=False, ignore_lower_equal_dim=True, fact_led_unit=False)
 ```
 
-### Why Use PyAutoFact
+### Why Use GreenFormer
 - Improve the speed of you model significantly, check our [Example Notebook](https://github.com/SamuelCahyawijaya/py_auto_fact/blob/main/examples/factorize_bert.ipynb)
 - Mantain model performance with appropriate choice of rank, check our [ICASSP 2020 Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9053878)
 - Easy to use and works on any kind of model!
